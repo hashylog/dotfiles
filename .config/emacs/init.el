@@ -16,7 +16,7 @@
 (column-number-mode t)
 
 ;; Disable startup messages
-(setq inhibit-startup-message t)
+;;(setq inhibit-startup-message t)
 (setq initial-scratch-message nil)
 
 ;; Enable mouse in terminal mode
@@ -36,7 +36,7 @@
 (global-set-key (kbd "C-s") 'save-buffer)
 
 ;; CTRL+Q - Quit Emacs
-(global-set-key (kbd "C-q") 'save-buffers-kill-terminal)
+(global-set-key (kbd "C-q") 'better-quit-emacs)
 
 ;; CTRL+F - Search (isearch-forward)
 (global-set-key (kbd "C-f") 'isearch-forward)
@@ -93,6 +93,13 @@
 ;; AUXILIARY FUNCTIONS
 ;; ============================================
 
+;; Quit Emacs
+(defun better-quit-emacs (&optional arg)
+  "Quit emacs without asking twice for saving."
+  (interactive "P")
+  (save-some-buffers arg)
+  (kill-emacs))
+
 ;; Create a new empty buffer
 (defun new-empty-buffer ()
   "Create a new empty buffer."
@@ -144,8 +151,28 @@
 ;; Tabs and spaces
 (setq-default indent-tabs-mode nil)
 (setq-default tab-width 4)
-(setq indent-line-function 'insert-tab)
+(setq-default tab-always-indent nil)
 
+;; Force TAB to always insert spaces/tab, never indent
+(setq-default indent-line-function 'insert-tab)
+
+;; Disable electric indentation (auto-indent on newline)
+(when (fboundp 'electric-indent-mode)
+  (electric-indent-mode -1))
+
+;; Make TAB key always insert tab/spaces in all modes
+(defun my-insert-tab ()
+  "Insert a tab character or spaces."
+  (interactive)
+  (insert-tab))
+
+;; Override TAB behavior in programming modes
+(add-hook 'prog-mode-hook
+          (lambda ()
+            (local-set-key (kbd "TAB") 'my-insert-tab)))
+
+;; Disable mode-specific indentation functions
+(setq-default indent-line-function 'insert-tab)
 ;; Highlight matching parentheses
 (show-paren-mode t)
 (setq show-paren-delay 0)
@@ -195,6 +222,13 @@
                 mode-name
                 " | "
                 mode-line-position))
+
+;; ============================================
+;; PACKAGES
+;; ============================================
+
+;; Custom Splash Screen
+(require 'splash-screen)
 
 ;; ============================================
 ;; END OF CONFIGURATION
