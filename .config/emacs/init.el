@@ -228,6 +228,7 @@
 ;; ============================================
 
 ;; Custom Splash Screen
+;; https://github.com/rougier/emacs-splash
 (require 'splash-screen)
 
 ;; ============================================
