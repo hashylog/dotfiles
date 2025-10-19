@@ -204,6 +204,9 @@
 (set-terminal-coding-system 'utf-8)
 (set-keyboard-coding-system 'utf-8)
 
+;; Enable automatic insertion of matching delimiters
+(electric-pair-mode 1)
+
 ;; Show trailing whitespace
 (setq-default show-trailing-whitespace t)
 
@@ -362,4 +365,3 @@
 ;; ============================================
 ;; END OF CONFIGURATION
 ;; ============================================
-
