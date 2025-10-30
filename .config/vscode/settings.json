@@ -1,0 +1,58 @@
+{
+    // General
+    "workbench.colorTheme": "Min Dark",
+    "workbench.iconTheme": "symbols",
+    "workbench.startupEditor": "newUntitledFile",
+    "workbench.statusBar.visible": true,
+    "workbench.tree.renderIndentGuides": "none",
+    "workbench.commandPalette.history": 0,
+    "window.titleBarStyle": "native",
+    "window.restoreWindows": "none",
+    "search.quickOpen.includeHistory": false,
+
+    // Editor
+    "editor.fontFamily": "JetBrains Mono",
+    "editor.lineHeight": 1.75,
+    "editor.mouseWheelZoom": true,
+    "editor.renderLineHighlight": "none",
+    "editor.renderLineHighlightOnlyWhenFocus": true,
+    "editor.selectionHighlight": false,
+    "editor.matchBrackets": "never",
+    "editor.bracketPairColorization.enabled": false,
+    "editor.occurrencesHighlight": "off",
+    "editor.semanticHighlighting.enabled": true,
+    "editor.guides.highlightActiveBracketPair": false,
+    "editor.guides.highlightActiveIndentation": false,
+    "editor.stickyScroll.enabled": false,
+    "editor.codeLens": false,
+    "editor.inlineSuggest.enabled": false,
+
+    // Scroll/Minimap
+    "editor.scrollbar.horizontal": "hidden",
+    "editor.scrollbar.vertical": "auto",
+    "editor.minimap.enabled": false,
+
+    // Sidebar/Explorer
+    "explorer.compactFolders": false,
+    "explorer.decorations.badges": false,
+    "breadcrumbs.enabled": false,
+    "symbols.hidesExplorerArrows": false,
+
+    // Terminal
+    "terminal.integrated.defaultProfile.linux": "zsh",
+    "terminal.integrated.cursorStyle": "line",
+    "terminal.integrated.cursorBlinking": true,
+    "terminal.integrated.mouseWheelZoom": true,
+
+    // Styles
+    "apc.listRow": { "height": 25 },
+    "apc.stylesheet": {
+        ".title-label > h2": "display: none",
+        ".editor-actions": "display: none"
+    },
+
+    // Others
+    "chat.commandCenter.enabled": false,
+    "workbench.editor.empty.hint": "hidden",
+    "workbench.secondarySideBar.defaultVisibility": "hidden"
+}
