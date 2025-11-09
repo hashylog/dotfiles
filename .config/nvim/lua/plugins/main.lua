@@ -1,5 +1,6 @@
 return
 {
+
   {
     "nvim-treesitter/nvim-treesitter", 
     branch = 'master', 
@@ -10,6 +11,7 @@ return
       auto_install = true,
     }
   },
+
   {
     "hashylog/micro-motion.nvim",
     config = function()
@@ -38,22 +40,42 @@ return
     -- use opts = {} for passing setup options
     -- this is equivalent to setup({}) function
   },
+
   {
     'nmac427/guess-indent.nvim',
     config = function() 
       require('guess-indent').setup()
     end
   },
+
   {
     "rebelot/kanagawa.nvim",
   },
+
   {
     "catppuccin/nvim", 
     name = "catppuccin", 
     priority = 1000 
   },
+
   {
     'nvim-lualine/lualine.nvim',
-    dependencies = { 'nvim-tree/nvim-web-devicons' }
-  }
+    dependencies = { 'nvim-tree/nvim-web-devicons' },
+    config = function()
+      require('lualine').setup();
+    end,
+  },
+
+  {
+    "nvim-tree/nvim-tree.lua",
+    version = "*",
+    lazy = false,
+    dependencies = {
+      "nvim-tree/nvim-web-devicons",
+    },
+    config = function()
+      require("nvim-tree").setup {}
+    end,
+  },
+
 }
