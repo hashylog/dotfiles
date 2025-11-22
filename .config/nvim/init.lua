@@ -1,10 +1,8 @@
 -- Lazy
 require("config.lazy")
--- NVide
-require('nvide')
 
 -- Set to true if you have a Nerd Font installed and selected in the terminal
-vim.g.have_nerd_font = true;
+vim.g.have_nerd_font = true
 
 -- Make line numbers default
 vim.o.number = true
@@ -58,5 +56,17 @@ vim.o.confirm = true
 -- Convert tabs to spaces
 vim.opt.expandtab = true
 
+-- Disable swap files
+vim.opt.swapfile = false
+
 -- Colorscheme
-vim.cmd("colorscheme kanagawa-dragon");
+vim.cmd("colorscheme kanagawa-dragon")
+
+vim.api.nvim_create_autocmd("ExitPre", {
+    group = vim.api.nvim_create_augroup("Exit", { clear = true }),
+    command = "set guicursor=a:ver90",
+    desc = "Set cursor back to beam when leaving Neovim."
+})
+
+-- NVide
+require('nvide')
