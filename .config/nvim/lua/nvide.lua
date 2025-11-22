@@ -19,14 +19,6 @@ local Settings = {
     ['Enabled'] = true,
     ['Shortcut'] = '<C-F>',
   },
-  ['Terminal'] = {
-    ['Enabled'] = true,
-    ['Shortcut'] = '<C-T>',
-  },
-  ['Sidebar'] = {
-    ['Enabled'] = true,
-    ['Shortcut'] = '<C-B>',
-  },
   ['FindFiles'] = {
     ['Enabled'] = true,
     ['Shortcut'] = '<C-P>',
@@ -275,6 +267,61 @@ vim.cmd [[
 
 	" vim: set sw=2 :
 ]]
+
+
+
+-- Save buffer [CTRL + S]
+local function smart_save()
+  -- Check if the buffer has a filename
+  local filename = vim.fn.expand('%')
+  if filename == '' or vim.bo.buftype ~= '' then
+    -- No filename or special buffer, ask for name
+    vim.cmd('stopinsert')
+    vim.ui.input({ 
+      prompt = 'Filename: ',
+      completion = 'file'
+    }, function(input)
+      if input and input ~= '' then
+        -- Save the file with the provided name
+        vim.cmd('write ' .. vim.fn.fnameescape(input))
+      end
+      -- Always return to insert mode after saving
+      vim.schedule(function()
+        vim.cmd('startinsert')
+      end)
+    end)
+  else
+    -- File already has a name, save normally
+    vim.cmd('update')
+    -- Return to insert mode after saving
+    vim.schedule(function()
+      vim.cmd('startinsert')
+    end)
+  end
+end
+-- Remap CTRL+S to use the smart function
+-- (This overrides the mswin.vim mappings)
+vim.keymap.set('n', '<C-S>', smart_save, { noremap = true, silent = true })
+vim.keymap.set('i', '<C-S>', function()
+  vim.cmd('stopinsert')
+  smart_save()
+end, { noremap = true, silent = true })
+vim.keymap.set('v', '<C-S>', function()
+  vim.cmd('normal! ')
+  smart_save()
+end, { noremap = true, silent = true })
+
+
+
+-- Quit NeoVim [CTRL + Q]
+-- normal, visual, select, operator
+vim.keymap.set({'n', 'v', 's', 'o'}, '<C-q>', ':q<CR>', { noremap = true, silent = true })
+
+-- insert mode
+vim.keymap.set('i', '<C-q>', '<Esc>:q<CR>', { noremap = true, silent = true })
+
+-- terminal mode
+vim.keymap.set('t', '<C-q>', '<C-\\><C-n>:q<CR>', { noremap = true, silent = true })
 
 
 
