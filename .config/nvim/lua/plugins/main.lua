@@ -2,14 +2,10 @@ return
 {
 
   {
-    "nvim-treesitter/nvim-treesitter", 
-    branch = 'master', 
-    lazy = false, 
-    build = ":TSUpdate",
-    opts = {
-      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' },
-      auto_install = true,
-    }
+    'nvim-treesitter/nvim-treesitter',
+    lazy = false,
+    branch = 'main',
+    build = ':TSUpdate'
   },
 
   {
@@ -67,15 +63,14 @@ return
   },
 
   {
-    "nvim-tree/nvim-tree.lua",
-    version = "*",
-    lazy = false,
+    "nvim-neo-tree/neo-tree.nvim",
+    branch = "v3.x",
     dependencies = {
-      "nvim-tree/nvim-web-devicons",
+      "nvim-lua/plenary.nvim",
+      "MunifTanjim/nui.nvim",
+      "nvim-tree/nvim-web-devicons", -- optional, but recommended
     },
-    config = function()
-      require("nvim-tree").setup {}
-    end,
+    lazy = false, -- neo-tree will lazily load itself
   },
 
 }
