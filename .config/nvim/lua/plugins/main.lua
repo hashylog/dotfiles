@@ -47,7 +47,14 @@ return
   {
     "rebelot/kanagawa.nvim",
     config = function()
-      vim.cmd('colorscheme kanagawa-dragon')
+      --vim.cmd('colorscheme kanagawa-dragon')
+    end
+  },
+
+  {
+    "lunarvim/Onedarker.nvim",
+    config = function()
+      vim.cmd('colorscheme onedarker')
     end
   },
 
@@ -68,6 +75,37 @@ return
       "nvim-tree/nvim-web-devicons", -- optional, but recommended
     },
     lazy = false, -- neo-tree will lazily load itself
+  },
+
+  {
+    "dstein64/nvim-scrollview",
+    branch = "main"
+  },
+
+  {
+    "rcarriga/nvim-notify",
+    config = function()
+      vim.notify = require("notify")
+    end
+  },
+
+  {
+    'akinsho/bufferline.nvim', 
+    version = "*",
+    dependencies = 'nvim-tree/nvim-web-devicons',
+    config = function()
+      require('bufferline').setup {
+        options = {
+          mode = "buffers",
+          offsets = {
+            {
+              filetype = "neo-tree",
+              text = "File Explorer",
+            }
+          }
+        }
+      }
+    end
   },
 
 }
