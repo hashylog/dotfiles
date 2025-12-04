@@ -62,9 +62,11 @@ vim.opt.expandtab = true
 -- Disable swap files
 vim.opt.swapfile = false
 
+-- Enable terminal gui colors
+vim.opt.termguicolors = true
+
 vim.api.nvim_create_autocmd("ExitPre", {
     group = vim.api.nvim_create_augroup("Exit", { clear = true }),
     command = "set guicursor=a:ver90",
     desc = "Set cursor back to beam when leaving Neovim."
 })
-
