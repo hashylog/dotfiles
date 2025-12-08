@@ -39,22 +39,8 @@ return
 
   {
     'nmac427/guess-indent.nvim',
-    config = function() 
+    config = function()
       require('guess-indent').setup()
-    end
-  },
-
-  {
-    "rebelot/kanagawa.nvim",
-    config = function()
-      --vim.cmd('colorscheme kanagawa-dragon')
-    end
-  },
-
-  {
-    "lunarvim/Onedarker.nvim",
-    config = function()
-      vim.cmd('colorscheme onedarker')
     end
   },
 
@@ -62,8 +48,13 @@ return
     'nvim-lualine/lualine.nvim',
     dependencies = { 'nvim-tree/nvim-web-devicons' },
     config = function()
-      require('lualine').setup();
-    end,
+      require('lualine').setup({
+          options = {
+            globalstatus = true
+          }
+        }
+      )
+    end
   },
 
   {
@@ -83,14 +74,23 @@ return
   },
 
   {
-    "rcarriga/nvim-notify",
-    config = function()
-      vim.notify = require("notify")
-    end
+    "folke/noice.nvim",
+    event = "VeryLazy",
+    opts = {
+      -- add any options here
+    },
+    dependencies = {
+      -- if you lazy-load any plugin below, make sure to add proper `module="..."` entries
+      "MunifTanjim/nui.nvim",
+      -- OPTIONAL:
+      --   `nvim-notify` is only needed, if you want to use the notification view.
+      --   If not available, we use `mini` as the fallback
+      "rcarriga/nvim-notify",
+      }
   },
 
   {
-    'akinsho/bufferline.nvim', 
+    'akinsho/bufferline.nvim',
     version = "*",
     dependencies = 'nvim-tree/nvim-web-devicons',
     config = function()
@@ -100,12 +100,50 @@ return
           offsets = {
             {
               filetype = "neo-tree",
+              highlight = "Directory",
               text = "File Explorer",
             }
           }
         }
       }
     end
+  },
+
+  {
+    "declancm/cinnamon.nvim",
+    version = "*", -- use latest release
+    opts = {
+      -- change default options here
+    }
+  },
+
+  {
+    "folke/tokyonight.nvim",
+    lazy = true,
+    opts = { style = "night" },
+  },
+
+  {
+    "catppuccin/nvim",
+    name = "catppuccin",
+    priority = 1000
+  },
+
+  {
+    "ellisonleao/gruvbox.nvim",
+    priority = 1000,
+    config = true,
+    opts = {}
+  },
+
+  {
+    "rebelot/kanagawa.nvim",
+    priority = 1000
+  },
+
+  {
+    "olimorris/onedarkpro.nvim",
+    priority = 1000
   },
 
 }
