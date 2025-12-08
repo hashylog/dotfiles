@@ -65,6 +65,12 @@ vim.opt.swapfile = false
 -- Enable terminal gui colors
 vim.opt.termguicolors = true
 
+-- Disable startup message
+vim.opt.shortmess:append("I")
+
+-- Set colorscheme
+vim.cmd("colorscheme tokyonight-night")
+
 vim.api.nvim_create_autocmd("ExitPre", {
     group = vim.api.nvim_create_augroup("Exit", { clear = true }),
     command = "set guicursor=a:ver90",
