@@ -1,78 +1,124 @@
--- Lazy
-require("config.lazy")
+
+--
+--     _   _         __     ___
+--    | \ | | ___  __\ \   / (_)_ __ ___
+--    |  \| |/ _ \/ _ \ \ / /| | '_ ` _ \
+--    | |\  |  __/ (_) \ V / | | | | | | |
+--    |_| \_|\___|\___/ \_/  |_|_| |_| |_|
+--
+--
+
+vim.g.mapleader = ' '
+vim.g.maplocalleader = ' '
+
+-- Plugins
+vim.pack.add(
+{
+
+  -- Dependencies
+  { src = 'https://github.com/nvim-lua/plenary.nvim', name = 'plenary' },
+  { src = 'https://github.com/nvim-telescope/telescope.nvim', name = 'telescope' },
+  { src = 'https://github.com/MunifTanjim/nui.nvim', name = 'nui' },
+  { src = 'https://github.com/DaikyXendo/nvim-material-icon.git', name = 'material-icon' },
+
+  -- Colorschemes
+  { src = 'https://github.com/catppuccin/nvim', name = 'catppuccin' },
+
+  -- Plugins
+  { src = 'https://github.com/NMAC427/guess-indent.nvim', name = 'guess-indent'},
+  { src = 'https://github.com/nvim-neo-tree/neo-tree.nvim', name = 'neotree' },
+  { src = 'https://github.com/windwp/nvim-autopairs', name = 'autopairs' },
+  { src = 'https://github.com/nvim-lualine/lualine.nvim', name = 'lualine' },
+  { src = 'https://github.com/nvim-treesitter/nvim-treesitter', name = 'treesitter' },
+  { src = 'https://github.com/nvim-lualine/lualine.nvim', name = 'lualine' },
+  { src = 'https://github.com/akinsho/bufferline.nvim', name = 'bufferline' },
+
+  -- Utils
+  { src = 'https://github.com/famiu/bufdelete.nvim', name = 'bufdelete' },
+
+})
 
 -- NVide
 require('nvide')
 
--- Set to true if you have a Nerd Font installed and selected in the terminal
+-- Nerd Fonts
 vim.g.have_nerd_font = true
 
--- Make line numbers default
+-- Show line numbers
 vim.o.number = true
 
--- Enable mouse mode, can be useful for resizing splits for example!
+-- Enable/Disable terminal GUI colors
+vim.opt.termguicolors = true
+
+-- Enable/Disable mouse
 vim.o.mouse = 'a'
 
--- Don't show the mode, since it's already in the status line
+-- Enable/Disable show current mode
 vim.o.showmode = false
 
--- Enable break indent
-vim.o.breakindent = true
-
--- Save undo history
+-- Enable/Disable backup files
 vim.o.undofile = true
+vim.o.swapfile = true
+vim.opt.writebackup = true
 vim.opt.backup = false
 
--- Case-insensitive searching UNLESS \C or one or more capital letters in the search term
+-- Enable/Disable case sensitive searches
 vim.o.ignorecase = true
 vim.o.smartcase = true
 
--- Keep signcolumn on by default
-vim.o.signcolumn = 'yes'
+-- Enable/Disable vertical spacing on gutter
+vim.o.signcolumn = 'auto'
 
--- Decrease update time
-vim.o.updatetime = 250
+-- Enable/Disable preview substitutions
+vim.o.inccommand = 'split'
 
--- Decrease mapped sequence wait time
-vim.o.timeoutlen = 300
+-- Enable/Disable confirmation dialog
+vim.o.confirm = true
 
--- Configure how new splits should be opened
-vim.o.splitright = true
-vim.o.splitbelow = true
+-- Disable NeoVim startup message
+vim.opt.shortmess:append("I")
 
--- Sets how neovim will display certain whitespace characters in the editor.
+-- Enable/Disable display whitespace
 vim.o.list = true
 vim.opt.listchars = { tab = '» ', trail = '·', nbsp = '␣' }
 
--- Preview substitutions live, as you type!
-vim.o.inccommand = 'split'
+vim.cmd.colorscheme('catppuccin-mocha')
 
--- Show which line your cursor is on
-vim.o.cursorline = false
+require('catppuccin').setup()
 
--- Minimal number of screen lines to keep above and below the cursor.
-vim.o.scrolloff = 0
+require('guess-indent').setup()
 
--- if performing an operation that would fail due to unsaved changes in the buffer (like `:q`),
-vim.o.confirm = true
+require('nvim-treesitter').setup()
 
--- Convert tabs to spaces
-vim.opt.expandtab = true
+require('nvim-autopairs').setup()
 
--- Disable swap files
-vim.opt.swapfile = false
+require('lualine').setup({
+  options = {
+    globalstatus = true,
+  },
+})
 
--- Enable terminal gui colors
-vim.opt.termguicolors = true
+require('neo-tree').setup({
+  filesystem = {
+    filtered_items = {
+      visible = true,
+      hide_dotfiles = false,
+      hide_gitignored = false
+    }
+  }
+})
 
--- Disable startup message
-vim.opt.shortmess:append("I")
-
--- Set colorscheme
-vim.cmd("colorscheme tokyonight-night")
-
-vim.api.nvim_create_autocmd("ExitPre", {
-    group = vim.api.nvim_create_augroup("Exit", { clear = true }),
-    command = "set guicursor=a:ver90",
-    desc = "Set cursor back to beam when leaving Neovim."
+require('bufferline').setup({
+ options = {
+   always_show_bufferline = false,
+   close_command = "Bdelete! %d",
+   offsets = {
+     {
+       filetype = "neo-tree",
+       text = "File Explorer",
+       text_align = "center",
+       separator = false
+     }
+   },
+ }
 })
