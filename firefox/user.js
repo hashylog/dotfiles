@@ -11,6 +11,8 @@ user_pref("general.autoScroll", true);
 // Always show the Bookmarks Toolbar
 user_pref("browser.toolbars.bookmarks.visibility", "always");
 
+// Native Title Bar
+user_pref("browser.tabs.inTitlebar", 0);
 
 /* 
    ==========================================================
