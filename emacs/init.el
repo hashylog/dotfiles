@@ -1,367 +1,479 @@
-;; ============================================
-;; Emacs Configuration
-;; ============================================
+;;; init.el --- Terminal-first VS Code/Micro workflow -*- lexical-binding: t; -*-
 
-;; Add local packages folder to load-path
-(let ((default-directory (expand-file-name "packages" user-emacs-directory)))
-  (normal-top-level-add-subdirs-to-load-path))
+;; Keep Emacs' generated state out of this file and inside var/.
+(defconst my/cache-directory (expand-file-name "var/" user-emacs-directory))
+(defconst my/package-directory (expand-file-name "elpa/" my/cache-directory))
+(dolist (directory (list my/cache-directory
+                         my/package-directory
+                         (expand-file-name "auto-save/" my/cache-directory)
+                         (expand-file-name "auto-save-list/" my/cache-directory)
+                         (expand-file-name "backups/" my/cache-directory)
+                         (expand-file-name "transient/" my/cache-directory)))
+  (make-directory directory t))
 
-;; Melpa
+(setq package-user-dir my/package-directory
+      package-quickstart-file (expand-file-name "package-quickstart.el" my/cache-directory)
+      custom-file null-device
+      auto-save-list-file-prefix (expand-file-name "auto-save-list/.saves-" my/cache-directory)
+      auto-save-file-name-transforms `((".*" ,(expand-file-name "auto-save/" my/cache-directory) t))
+      backup-directory-alist `(("." . ,(expand-file-name "backups/" my/cache-directory)))
+      tramp-persistency-file-name (expand-file-name "tramp" my/cache-directory)
+      recentf-save-file (expand-file-name "recentf" my/cache-directory)
+      savehist-file (expand-file-name "savehist" my/cache-directory)
+      save-place-file (expand-file-name "places" my/cache-directory)
+      bookmark-default-file (expand-file-name "bookmarks" my/cache-directory)
+      project-list-file (expand-file-name "projects" my/cache-directory)
+      mc/list-file (expand-file-name "multiple-cursors.el" my/cache-directory)
+      transient-levels-file (expand-file-name "transient/levels.el" my/cache-directory)
+      transient-values-file (expand-file-name "transient/values.el" my/cache-directory)
+      transient-history-file (expand-file-name "transient/history.el" my/cache-directory)
+      url-configuration-directory (expand-file-name "url/" my/cache-directory))
+
+(when (boundp 'native-comp-eln-load-path)
+  (add-to-list 'native-comp-eln-load-path
+               (expand-file-name "eln-cache/" my/cache-directory)))
+
+;;; Packages
+
 (require 'package)
-(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+(setq package-archives '(("gnu" . "https://elpa.gnu.org/packages/")
+                         ("nongnu" . "https://elpa.nongnu.org/nongnu/")
+                         ("melpa" . "https://melpa.org/packages/"))
+      package-archive-priorities '(("gnu" . 30) ("nongnu" . 20) ("melpa" . 10)))
 (package-initialize)
 
-;; Disable menus and toolbars (for terminal mode)
+(require 'use-package)
+(setq use-package-always-ensure t
+      use-package-expand-minimally t)
+
+;;; Core behavior
+
+(setq inhibit-startup-screen t
+      inhibit-startup-message t
+      initial-scratch-message nil
+      ring-bell-function #'ignore
+      use-dialog-box nil
+      use-file-dialog nil
+      confirm-kill-emacs #'y-or-n-p
+      sentence-end-double-space nil
+      scroll-conservatively 101
+      scroll-margin 2
+      mouse-wheel-scroll-amount '(3 ((shift) . 1))
+      mouse-wheel-progressive-speed nil
+      redisplay-dont-pause t
+      fast-but-imprecise-scrolling t
+      read-process-output-max (* 1024 1024)
+      tab-width 4
+      indent-tabs-mode nil
+      require-final-newline t
+      kill-do-not-save-duplicates t
+      delete-by-moving-to-trash t
+      uniquify-buffer-name-style 'forward
+      vc-follow-symlinks t
+      compilation-scroll-output 'first-error
+      display-line-numbers-type 'relative)
+
 (menu-bar-mode -1)
-(when (fboundp 'tool-bar-mode) (tool-bar-mode -1))
-(when (fboundp 'scroll-bar-mode) (scroll-bar-mode -1))
+(when (fboundp 'tool-bar-mode)
+  (tool-bar-mode -1))
+(when (fboundp 'scroll-bar-mode)
+  (scroll-bar-mode -1))
+(when (fboundp 'tooltip-mode)
+  (tooltip-mode -1))
+(blink-cursor-mode -1)
+(column-number-mode 1)
+(global-hl-line-mode 1)
+(global-display-line-numbers-mode 1)
+(global-auto-revert-mode 1)
+(global-so-long-mode 1)
+(electric-pair-mode 1)
+(delete-selection-mode 1)
+(save-place-mode 1)
+(savehist-mode 1)
+(recentf-mode 1)
+(winner-mode 1)
+(tab-bar-mode -1)
+(global-tab-line-mode 1)
+(when (fboundp 'xterm-mouse-mode)
+  (xterm-mouse-mode 1))
 
-;; Show line and column numbers
-(global-display-line-numbers-mode t)
-(column-number-mode t)
+;; Shift plus an arrow extends the selection; arrows without Shift clear it.
+(setq shift-select-mode t)
 
-;; Disable startup messages
-;;(setq inhibit-startup-message t)
-(setq initial-scratch-message nil)
+(dolist (hook '(prog-mode-hook text-mode-hook conf-mode-hook))
+  (add-hook hook (lambda ()
+                   (setq-local indent-tabs-mode nil)
+                   (display-fill-column-indicator-mode 1))))
+(dolist (hook '(term-mode-hook shell-mode-hook eshell-mode-hook
+                dired-mode-hook help-mode-hook dashboard-mode-hook))
+  (add-hook hook (lambda () (display-line-numbers-mode -1))))
 
-;; Enable mouse in terminal mode
-(xterm-mouse-mode 1)
+(add-hook 'before-save-hook #'delete-trailing-whitespace)
+(add-hook 'prog-mode-hook #'hs-minor-mode)
+(add-hook 'prog-mode-hook #'flymake-mode)
+(add-hook 'prog-mode-hook #'completion-preview-mode)
 
-;; Disable Custom File
-(setq custom-file "/dev/null") 
+;;; Doom-inspired terminal UI
 
-;; ============================================
-;; KEYBINDS
-;; ============================================
+(use-package doom-themes
+  :config
+  (load-theme 'doom-one t)
+  (doom-themes-visual-bell-config)
+  (doom-themes-org-config))
 
-;; Enable CUA mode with custom behavior
-(cua-mode t)
-(setq cua-auto-tabify-rectangles nil)
-(transient-mark-mode 1)
-(setq cua-keep-region-after-copy t)
+(use-package doom-modeline
+  :init
+  (setq doom-modeline-icon (display-graphic-p)
+        doom-modeline-major-mode-icon nil
+        doom-modeline-buffer-file-name-style 'truncate-with-project
+        doom-modeline-buffer-state-icon t
+        doom-modeline-buffer-modification-icon t
+        doom-modeline-position-column-line-format '("%l:%c")
+        doom-modeline-height 24)
+  :config
+  (doom-modeline-mode 1))
 
-;; CTRL+S - Save buffer
-(global-set-key (kbd "C-s") 'save-buffer)
+(set-face-attribute 'vertical-border nil :foreground "#3f444a")
+(set-face-attribute 'fringe nil :background "#282c34")
+(set-face-attribute 'tab-line nil :background "#1b1d23" :foreground "#5B6268" :height 0.95)
+(set-face-attribute 'tab-line-tab-current nil :background "#282c34" :foreground "#bbc2cf" :box nil)
+(set-face-attribute 'tab-line-tab-inactive nil :background "#21242b" :foreground "#73797e" :box nil)
+(setq tab-line-close-button-show nil
+      tab-line-new-button-show nil
+      tab-line-switch-cycling t
+      window-divider-default-right-width 1)
+(window-divider-mode 1)
 
-;; CTRL+Q - Quit Emacs
-(global-set-key (kbd "C-q") 'better-quit-emacs)
+(use-package dashboard
+  :init
+  (setq dashboard-startup-banner 'logo
+        dashboard-center-content t
+        dashboard-vertically-center-content t
+        dashboard-show-shortcuts nil
+        dashboard-items '((recents . 8) (projects . 5) (bookmarks . 3))
+        dashboard-set-heading-icons nil
+        dashboard-set-file-icons nil
+        dashboard-footer-messages '("Emacs TUI - C-M-p abre a paleta de comandos"))
+  :config
+  (dashboard-setup-startup-hook))
 
-;; CTRL+F - Search (isearch-forward)
-(global-set-key (kbd "C-f") 'isearch-forward)
-(define-key isearch-mode-map (kbd "C-f") 'isearch-repeat-forward)
+(use-package which-key
+  :ensure nil
+  :init
+  (setq which-key-idle-delay 0.5
+        which-key-max-description-length 40)
+  :config
+  (which-key-mode 1))
 
-;; CTRL+H - Search and replace
-(global-set-key (kbd "C-h") 'query-replace)
+;;; Completion and navigation
 
-;; CTRL+Z - Undo
-(global-set-key (kbd "C-z") 'undo)
+(use-package vertico
+  :init
+  (vertico-mode 1)
+  (setq vertico-cycle t))
 
-;; CTRL+Y - Redo
-(global-set-key (kbd "C-y") 'undo-redo)
+(use-package orderless
+  :init
+  (setq completion-styles '(orderless basic)
+        completion-category-defaults nil
+        completion-category-overrides '((file (styles partial-completion)))))
 
-;; CTRL+A - Select all
-(global-set-key (kbd "C-a") 'mark-whole-buffer)
+(use-package marginalia
+  :init (marginalia-mode 1))
 
-;; CTRL+O - Open file
-(global-set-key (kbd "C-o") 'find-file)
+(use-package consult
+  :bind (("C-S-f" . consult-ripgrep)
+         ("M-s l" . consult-line)
+         ("M-s r" . consult-ripgrep)
+         ("M-y" . consult-yank-pop)))
 
-;; CTRL+W - Close buffer
-(global-set-key (kbd "C-w") 'kill-buffer)
+(use-package corfu
+  :init
+  (global-corfu-mode 1)
+  :custom
+  (corfu-auto t)
+  (corfu-auto-delay 0.15)
+  (corfu-cycle t)
+  (corfu-preselect 'prompt))
 
-;; CTRL+N - New empty file
-(global-set-key (kbd "C-n") 'new-empty-buffer)
+(use-package corfu-terminal
+  :if (not (display-graphic-p))
+  :after corfu
+  :config (corfu-terminal-mode 1))
 
-;; CTRL+D - Duplicate line
-(global-set-key (kbd "C-d") 'duplicate-line)
+(use-package cape
+  :init
+  (add-to-list 'completion-at-point-functions #'cape-file)
+  (add-to-list 'completion-at-point-functions #'cape-dabbrev))
 
-;; CTRL+K - Delete entire line
-(global-set-key (kbd "C-k") 'kill-whole-line)
+(use-package editorconfig
+  :config (editorconfig-mode 1))
 
-;; CTRL+/ - Comment / Uncomment line
-(global-set-key (kbd "C-/") 'comment-line)
+(use-package multiple-cursors)
+(use-package clipetty
+  :if (not (display-graphic-p))
+  :config (global-clipetty-mode 1))
 
-;; ALT+UP/DOWN - Move line up/down
-(global-set-key (kbd "M-<up>") 'move-line-up)
-(global-set-key (kbd "M-<down>") 'move-line-down)
+;;; Editor commands
 
-;; CTRL+G - Go to line
-(global-set-key (kbd "C-g") 'goto-line)
+(require 'project)
+(require 'dired)
+(require 'comint)
+(require 'shell)
 
-;; CTRL+E - Execute command (M-x)
-(global-set-key (kbd "C-e") 'execute-extended-command)
+(defun my/project-root ()
+  "Return the current project root, falling back to `default-directory'."
+  (if-let ((project (project-current)))
+      (project-root project)
+    default-directory))
 
-;; CTRL+P - Quick open (simple command palette)
-(global-set-key (kbd "C-p") 'find-file)
-
-;; TAB and SHIFT+TAB - Indent / Un-indent
-(global-set-key (kbd "TAB") 'indent-for-tab-command)
-(global-set-key (kbd "<backtab>") 'un-indent-region)
-
-;; ============================================
-;; AUXILIARY FUNCTIONS
-;; ============================================
-
-;; Quit Emacs
-(defun better-quit-emacs (&optional arg)
-  "Quit emacs without asking twice for saving."
-  (interactive "P")
-  (save-some-buffers arg)
-  (kill-emacs))
-
-;; Create a new empty buffer
-(defun new-empty-buffer ()
-  "Create a new empty buffer."
+(defun my/quick-open ()
+  "Open a project file like VS Code's Quick Open."
   (interactive)
-  (let ((buf (generate-new-buffer "untitled")))
-    (switch-to-buffer buf)
-    (funcall initial-major-mode)
-    (setq buffer-offer-save t)))
+  (if (project-current)
+      (call-interactively #'project-find-file)
+    (call-interactively #'find-file)))
 
-;; Duplicate the current line
-(defun duplicate-line ()
-  "Duplicate the current line."
+(defun my/new-buffer ()
+  "Create a new untitled buffer."
   (interactive)
-  (let ((col (current-column)))
-    (move-beginning-of-line 1)
-    (kill-line)
-    (yank)
-    (newline)
-    (yank)
-    (move-to-column col)))
+  (let ((buffer (generate-new-buffer "untitled")))
+    (switch-to-buffer buffer)
+    (funcall initial-major-mode)))
 
-;; Move current line up
-(defun move-line-up ()
-  "Move the current line up."
+(defun my/close-buffer ()
+  "Close the current buffer without closing its window."
   (interactive)
-  (transpose-lines 1)
-  (forward-line -2))
+  (when (buffer-modified-p)
+    (if (y-or-n-p (format "Save %s before closing? " (buffer-name)))
+        (save-buffer)
+      (set-buffer-modified-p nil)))
+  (kill-current-buffer))
 
-;; Move current line down
-(defun move-line-down ()
-  "Move the current line down."
+(defun my/quit-emacs ()
+  "Offer to save each file, then exit without a modified-buffer prompt."
+  (interactive)
+  (let ((confirm-kill-emacs nil))
+    (save-some-buffers)
+    (kill-emacs)))
+
+(defun my/copy-region-or-line ()
+  "Copy the active region or the current line."
+  (interactive)
+  (let ((start (if (use-region-p) (region-beginning) (line-beginning-position)))
+        (end (if (use-region-p) (region-end) (line-beginning-position 2))))
+    (kill-ring-save start end)
+    (deactivate-mark)))
+
+(defun my/cut-region-or-line ()
+  "Cut the active region or the current line."
+  (interactive)
+  (let ((start (if (use-region-p) (region-beginning) (line-beginning-position)))
+        (end (if (use-region-p) (region-end) (line-beginning-position 2))))
+    (kill-region start end)))
+
+(defun my/move-left ()
+  "Move left and clear an active selection."
+  (interactive)
+  (deactivate-mark)
+  (backward-char))
+
+(defun my/move-right ()
+  "Move right and clear an active selection."
+  (interactive)
+  (deactivate-mark)
+  (forward-char))
+
+(defun my/move-up ()
+  "Move up and clear an active selection."
+  (interactive)
+  (deactivate-mark)
+  (previous-line))
+
+(defun my/move-down ()
+  "Move down and clear an active selection."
+  (interactive)
+  (deactivate-mark)
+  (next-line))
+
+(defun my/start-selection ()
+  "Start a selection at point unless one is already active."
+  (unless (use-region-p)
+    (set-mark (point))
+    (activate-mark)))
+
+(defun my/select-left ()
+  "Extend the selection one character left."
+  (interactive)
+  (my/start-selection)
+  (backward-char))
+
+(defun my/select-right ()
+  "Extend the selection one character right."
+  (interactive)
+  (my/start-selection)
+  (forward-char))
+
+(defun my/select-up ()
+  "Extend the selection one line up."
+  (interactive)
+  (my/start-selection)
+  (previous-line))
+
+(defun my/select-down ()
+  "Extend the selection one line down."
+  (interactive)
+  (my/start-selection)
+  (next-line))
+
+(defun my/duplicate-line-or-region ()
+  "Duplicate the active region or the current line."
+  (interactive)
+  (let* ((region (use-region-p))
+         (start (if region (region-beginning) (line-beginning-position)))
+         (end (if region (region-end) (line-beginning-position 2)))
+         (text (buffer-substring start end)))
+    (goto-char end)
+    (insert text)
+    (when region
+      (set-mark end)
+      (activate-mark))))
+
+(defun my/move-line-up ()
+  "Move the current line one line up."
+  (interactive)
+  (unless (bobp)
+    (transpose-lines 1)
+    (forward-line -2)))
+
+(defun my/move-line-down ()
+  "Move the current line one line down."
   (interactive)
   (forward-line 1)
-  (transpose-lines 1)
-  (forward-line -1))
+  (unless (eobp)
+    (transpose-lines 1)
+    (forward-line -1)))
 
-;; Un-indent region or current line
-(defun un-indent-region ()
-  "Remove one indentation level from the selected region or current line."
+(defun my/toggle-explorer ()
+  "Toggle a project-aware Dired sidebar."
   (interactive)
-  (if (use-region-p)
-      (indent-rigidly (region-beginning) (region-end) (- tab-width))
-    (indent-rigidly (line-beginning-position) (line-end-position) (- tab-width))))
+  (if-let ((window (seq-find (lambda (candidate)
+                               (window-parameter candidate 'my-explorer))
+                             (window-list))))
+      (delete-window window)
+    (let* ((buffer (dired-noselect (my/project-root)))
+           (window (display-buffer-in-side-window
+                    buffer '((side . left) (slot . -1) (window-width . 32)))))
+      (set-window-parameter window 'my-explorer t)
+      (set-window-dedicated-p window t)
+      (with-current-buffer buffer
+        (dired-hide-details-mode 1)
+        (hl-line-mode 1))
+      (select-window window))))
 
-;; ============================================
-;; EDITING SETTINGS
-;; ============================================
-
-;; Tabs and spaces
-(setq-default indent-tabs-mode nil)
-(setq-default tab-width 4)
-(setq-default tab-always-indent nil)
-
-;; Force TAB to always insert spaces/tab, never indent
-(setq-default indent-line-function 'insert-tab)
-
-;; Disable electric indentation (auto-indent on newline)
-(when (fboundp 'electric-indent-mode)
-  (electric-indent-mode -1))
-
-;; Make TAB key always insert tab/spaces in all modes
-(defun my-insert-tab ()
-  "Insert a tab character or spaces."
+(defun my/toggle-terminal ()
+  "Toggle an interactive shell in a bottom panel."
   (interactive)
-  (insert-tab))
+  (let ((window (get-buffer-window "*terminal*")))
+    (if window
+        (delete-window window)
+      (let ((buffer (get-buffer-create "*terminal*")))
+        (unless (comint-check-proc buffer)
+          (make-comint-in-buffer "terminal" buffer shell-file-name nil "-i")
+          (with-current-buffer buffer (shell-mode)))
+        (select-window
+         (display-buffer-in-side-window
+          buffer '((side . bottom) (slot . -1) (window-height . 0.30))))))))
 
-;; Override TAB behavior in programming modes
-(add-hook 'prog-mode-hook
-          (lambda ()
-            (local-set-key (kbd "TAB") 'my-insert-tab)))
+(defun my/format-buffer ()
+  "Format using Eglot when available, otherwise reindent the buffer."
+  (interactive)
+  (if (and (fboundp 'eglot-managed-p) (eglot-managed-p))
+      (eglot-format-buffer)
+    (indent-region (point-min) (point-max))))
 
-;; Disable mode-specific indentation functions
-(setq-default indent-line-function 'insert-tab)
-;; Highlight matching parentheses
-(show-paren-mode t)
-(setq show-paren-delay 0)
+(defun my/toggle-zen ()
+  "Toggle a distraction-free single-window layout."
+  (interactive)
+  (if (> (length (window-list)) 1)
+      (progn (winner-save-old-configurations) (delete-other-windows))
+    (winner-undo)))
 
-;; Delete selection when typing
-(delete-selection-mode t)
+;;; Familiar Micro/VS Code keybindings
 
-;; Highlight current line (optional)
-;; (global-hl-line-mode t)
+(global-set-key (kbd "C-s") #'save-buffer)
+(global-set-key (kbd "C-S-s") #'write-file)
+(global-set-key (kbd "C-n") #'my/new-buffer)
+(global-set-key (kbd "C-q") #'my/close-buffer)
+(global-set-key (kbd "M-q") #'my/quit-emacs)
+(global-set-key (kbd "C-f") #'isearch-forward)
+(global-set-key (kbd "C-z") #'undo-only)
+(global-set-key (kbd "C-y") #'undo-redo)
+(global-set-key (kbd "C-a") #'mark-whole-buffer)
+(global-set-key (kbd "C-d") #'my/duplicate-line-or-region)
+(global-set-key (kbd "C-/") #'comment-line)
+(global-set-key (kbd "<left>") #'my/move-left)
+(global-set-key (kbd "<right>") #'my/move-right)
+(global-set-key (kbd "<up>") #'my/move-up)
+(global-set-key (kbd "<down>") #'my/move-down)
+(global-set-key (kbd "<S-left>") #'my/select-left)
+(global-set-key (kbd "<S-right>") #'my/select-right)
+(global-set-key (kbd "<S-up>") #'my/select-up)
+(global-set-key (kbd "<S-down>") #'my/select-down)
+(global-set-key (kbd "M-<up>") #'my/move-line-up)
+(global-set-key (kbd "M-<down>") #'my/move-line-down)
+(global-set-key (kbd "M-S-<up>") #'mc/mark-previous-like-this)
+(global-set-key (kbd "M-S-<down>") #'mc/mark-next-like-this)
+(global-set-key (kbd "C-SPC") #'completion-at-point)
+(global-set-key (kbd "<f1>") help-map)
+(global-set-key (kbd "<f12>") #'xref-find-definitions)
+(global-set-key (kbd "S-<f12>") #'xref-find-references)
+(global-set-key (kbd "C-M-p") #'execute-extended-command)
+(global-set-key (kbd "C-S-p") #'execute-extended-command)
 
-;; Enable visual line wrapping
-(global-visual-line-mode t)
+;; These keys are intentionally left empty until they are remapped later.
+(dolist (key '("C-o" "C-p" "C-w" "<f3>" "<S-f3>" "C-b" "C-`"
+               "C-<tab>" "C-S-<tab>" "C-<prior>" "C-<next>" "C-," "C-S-g"))
+  (global-unset-key (kbd key)))
 
-;; Disable auto-save and backup files
-(setq make-backup-files nil)
-(setq auto-save-default nil)
+;; A minor-mode map takes precedence over major-mode C-c prefixes. This makes
+;; C-c and C-x conventional copy/cut keys everywhere, as requested.
+(defvar-keymap my/familiar-keys-map
+  "C-c" #'my/copy-region-or-line
+  "C-x" #'my/cut-region-or-line
+  "C-v" #'yank
+  "C-q" #'my/close-buffer
+  "M-q" #'my/quit-emacs)
+(define-minor-mode my/familiar-keys-mode
+  "Use conventional copy and cut keys instead of Emacs prefix maps."
+  :global t
+  :keymap my/familiar-keys-map)
+(defvar my/familiar-keys-emulation-alist
+  `((my/familiar-keys-mode . ,my/familiar-keys-map)))
+(add-to-list 'emulation-mode-map-alists 'my/familiar-keys-emulation-alist)
+(my/familiar-keys-mode 1)
 
-;; UTF-8 encoding
-(prefer-coding-system 'utf-8)
-(set-default-coding-systems 'utf-8)
-(set-terminal-coding-system 'utf-8)
-(set-keyboard-coding-system 'utf-8)
+;; While Find is active, arrows cycle through matches and RET accepts one.
+(define-key isearch-mode-map (kbd "<down>") #'isearch-repeat-forward)
+(define-key isearch-mode-map (kbd "<up>") #'isearch-repeat-backward)
 
-;; Enable automatic insertion of matching delimiters
-(electric-pair-mode 1)
+;; VS Code-style C-k chords. M-x always remains available as an escape hatch.
+(define-prefix-command 'my/code-prefix)
+(global-set-key (kbd "C-k") 'my/code-prefix)
+(define-key my/code-prefix (kbd "C-s") #'describe-bindings)
+(define-key my/code-prefix (kbd "C-z") #'my/toggle-zen)
+(define-key my/code-prefix (kbd "C-c") #'comment-region)
+(define-key my/code-prefix (kbd "C-u") #'uncomment-region)
+(define-key my/code-prefix (kbd "C-0") #'delete-window)
+(define-key my/code-prefix (kbd "C-\\") #'split-window-right)
+(define-key my/code-prefix (kbd "C--") #'split-window-below)
 
-;; Show trailing whitespace
-(setq-default show-trailing-whitespace t)
+;; Web/configuration files conventionally use two spaces; EditorConfig wins
+;; whenever a project supplies its own policy.
+(dolist (hook '(js-mode-hook js-ts-mode-hook typescript-ts-mode-hook
+                json-ts-mode-hook css-mode-hook css-ts-mode-hook
+                html-mode-hook mhtml-mode-hook yaml-ts-mode-hook))
+  (add-hook hook (lambda () (setq-local tab-width 2))))
 
-;; Smooth scrolling
-(setq scroll-step 1)
-(setq scroll-conservatively 10000)
-
-;; ============================================
-;; VISUAL ENHANCEMENTS (Terminal)
-;; ============================================
-
-;; Theme
-;;(load-theme 'wombat t)
-
-;; Better syntax highlighting
-(global-font-lock-mode t)
-
-;; Custom mode-line format
-(setq-default mode-line-format
-              '("%e"
-                " > "
-                mode-line-buffer-identification
-                " | "
-                mode-name
-                " | "
-                mode-line-position))
-
-;; ============================================
-;; PACKAGES
-;; ============================================
-
-;; Custom Splash Screen
-;; https://github.com/rougier/emacs-splash
-(require 'splash-screen)
-
-
-;; Treemacs File Manager
-(use-package treemacs
-  :ensure t
-  :defer t
-  :init
-  (with-eval-after-load 'winum
-    (define-key winum-keymap (kbd "M-0") #'treemacs-select-window))
-  :config
-  (progn
-    (setq treemacs-buffer-name-function            #'treemacs-default-buffer-name
-          treemacs-buffer-name-prefix              " *Treemacs-Buffer-"
-          treemacs-collapse-dirs                   0
-          treemacs-deferred-git-apply-delay        0.5
-          treemacs-directory-name-transformer      #'identity
-          treemacs-display-in-side-window          t
-          treemacs-eldoc-display                   'simple
-          treemacs-file-event-delay                2000
-          treemacs-file-extension-regex            treemacs-last-period-regex-value
-          treemacs-file-follow-delay               0.2
-          treemacs-file-name-transformer           #'identity
-          treemacs-follow-after-init               t
-          treemacs-expand-after-init               t
-          treemacs-find-workspace-method           'find-for-file-or-pick-first
-          treemacs-git-command-pipe                ""
-          treemacs-goto-tag-strategy               'refetch-index
-          treemacs-header-scroll-indicators        '(nil . "^^^^^^")
-          treemacs-hide-dot-git-directory          t
-          treemacs-indentation                     2
-          treemacs-indentation-string              " "
-          treemacs-is-never-other-window           nil
-          treemacs-max-git-entries                 5000
-          treemacs-missing-project-action          'ask
-          treemacs-move-files-by-mouse-dragging    t
-          treemacs-move-forward-on-expand          nil
-          treemacs-no-png-images                   nil
-          treemacs-no-delete-other-windows         t
-          treemacs-project-follow-cleanup          nil
-          treemacs-persist-file                    (expand-file-name ".cache/treemacs-persist" user-emacs-directory)
-          treemacs-position                        'left
-          treemacs-read-string-input               'from-child-frame
-          treemacs-recenter-distance               0.1
-          treemacs-recenter-after-file-follow      nil
-          treemacs-recenter-after-tag-follow       nil
-          treemacs-recenter-after-project-jump     'always
-          treemacs-recenter-after-project-expand   'on-distance
-          treemacs-litter-directories              '("/node_modules" "/.venv" "/.cask")
-          treemacs-project-follow-into-home        nil
-          treemacs-show-cursor                     nil
-          treemacs-show-hidden-files               t
-          treemacs-silent-filewatch                nil
-          treemacs-silent-refresh                  nil
-          treemacs-sorting                         'alphabetic-asc
-          treemacs-select-when-already-in-treemacs 'move-back
-          treemacs-space-between-root-nodes        t
-          treemacs-tag-follow-cleanup              t
-          treemacs-tag-follow-delay                1.5
-          treemacs-text-scale                      nil
-          treemacs-user-mode-line-format           nil
-          treemacs-user-header-line-format         nil
-          treemacs-wide-toggle-width               70
-          treemacs-width                           35
-          treemacs-width-increment                 1
-          treemacs-width-is-initially-locked       t
-          treemacs-workspace-switch-cleanup        nil)
-
-    ;; The default width and height of the icons is 22 pixels. If you are
-    ;; using a Hi-DPI display, uncomment this to double the icon size.
-    ;;(treemacs-resize-icons 44)
-
-    (treemacs-follow-mode t)
-    (treemacs-filewatch-mode t)
-    (treemacs-fringe-indicator-mode 'always)
-    (when treemacs-python-executable
-      (treemacs-git-commit-diff-mode t))
-
-    (pcase (cons (not (null (executable-find "git")))
-                 (not (null treemacs-python-executable)))
-      (`(t . t)
-       (treemacs-git-mode 'deferred))
-      (`(t . _)
-       (treemacs-git-mode 'simple)))
-
-    (treemacs-hide-gitignored-files-mode nil))
-  :bind
-  (:map global-map
-        ("M-0"       . treemacs-select-window)
-        ("C-x t 1"   . treemacs-delete-other-windows)
-        ("C-x t t"   . treemacs)
-        ("C-x t d"   . treemacs-select-directory)
-        ("C-x t B"   . treemacs-bookmark)
-        ("C-x t C-t" . treemacs-find-file)
-        ("C-x t M-t" . treemacs-find-tag)))
-
-(use-package treemacs-evil
-  :after (treemacs evil)
-  :ensure t)
-
-(use-package treemacs-projectile
-  :after (treemacs projectile)
-  :ensure t)
-
-(use-package treemacs-icons-dired
-  :hook (dired-mode . treemacs-icons-dired-enable-once)
-  :ensure t)
-
-(use-package treemacs-magit
-  :after (treemacs magit)
-  :ensure t)
-
-(use-package treemacs-persp ;;treemacs-perspective if you use perspective.el vs. persp-mode
-  :after (treemacs persp-mode) ;;or perspective vs. persp-mode
-  :ensure t
-  :config (treemacs-set-scope-type 'Perspectives))
-
-(use-package treemacs-tab-bar ;;treemacs-tab-bar if you use tab-bar-mode
-  :after (treemacs)
-  :ensure t
-  :config (treemacs-set-scope-type 'Tabs))
-
-;; ============================================
-;; END OF CONFIGURATION
-;; ============================================
+(provide 'init)
+;;; init.el ends here
