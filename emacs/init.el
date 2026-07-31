@@ -51,7 +51,11 @@
 (setq inhibit-startup-screen t
       inhibit-startup-message t
       initial-scratch-message nil
+      initial-major-mode 'fundamental-mode
       ring-bell-function #'ignore
+      message-log-max 200
+      warning-minimum-level :error
+      warning-minimum-log-level :warning
       use-dialog-box nil
       use-file-dialog nil
       confirm-kill-emacs #'y-or-n-p
@@ -105,7 +109,7 @@
                    (setq-local indent-tabs-mode nil)
                    (display-fill-column-indicator-mode 1))))
 (dolist (hook '(term-mode-hook shell-mode-hook eshell-mode-hook
-                dired-mode-hook help-mode-hook dashboard-mode-hook))
+                dired-mode-hook help-mode-hook))
   (add-hook hook (lambda () (display-line-numbers-mode -1))))
 
 (add-hook 'before-save-hook #'delete-trailing-whitespace)
@@ -143,19 +147,6 @@
       tab-line-switch-cycling t
       window-divider-default-right-width 1)
 (window-divider-mode 1)
-
-(use-package dashboard
-  :init
-  (setq dashboard-startup-banner 'logo
-        dashboard-center-content t
-        dashboard-vertically-center-content t
-        dashboard-show-shortcuts nil
-        dashboard-items '((recents . 8) (projects . 5) (bookmarks . 3))
-        dashboard-set-heading-icons nil
-        dashboard-set-file-icons nil
-        dashboard-footer-messages '("Emacs TUI - C-M-p abre a paleta de comandos"))
-  :config
-  (dashboard-setup-startup-hook))
 
 (use-package which-key
   :ensure nil
@@ -220,6 +211,23 @@
 (require 'dired)
 (require 'comint)
 (require 'shell)
+
+(defvar my/echo-area-clear-timer nil)
+
+(defun my/clear-echo-area-later (text)
+  "Clear informational echo-area messages shortly after displaying TEXT."
+  (when (timerp my/echo-area-clear-timer)
+    (cancel-timer my/echo-area-clear-timer))
+  (when (and text (not (active-minibuffer-window)))
+    (setq my/echo-area-clear-timer
+          (run-at-time
+           2 nil
+           (lambda ()
+             (unless (active-minibuffer-window)
+               (message nil))))))
+  nil)
+
+(add-to-list 'set-message-functions #'my/clear-echo-area-later t)
 
 (defun my/project-root ()
   "Return the current project root, falling back to `default-directory'."
@@ -428,8 +436,9 @@
 (global-set-key (kbd "<f1>") help-map)
 (global-set-key (kbd "<f12>") #'xref-find-definitions)
 (global-set-key (kbd "S-<f12>") #'xref-find-references)
-(global-set-key (kbd "C-M-p") #'execute-extended-command)
-(global-set-key (kbd "C-S-p") #'execute-extended-command)
+(global-set-key (kbd "C-e") #'execute-extended-command)
+(global-unset-key (kbd "C-M-p"))
+(global-unset-key (kbd "C-S-p"))
 
 ;; These keys are intentionally left empty until they are remapped later.
 (dolist (key '("C-o" "C-p" "C-w" "<f3>" "<S-f3>" "C-b" "C-`"
@@ -443,7 +452,8 @@
   "C-x" #'my/cut-region-or-line
   "C-v" #'yank
   "C-q" #'my/close-buffer
-  "M-q" #'my/quit-emacs)
+  "M-q" #'my/quit-emacs
+  "C-e" #'execute-extended-command)
 (define-minor-mode my/familiar-keys-mode
   "Use conventional copy and cut keys instead of Emacs prefix maps."
   :global t
