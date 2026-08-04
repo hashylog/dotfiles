@@ -112,7 +112,7 @@ in
     git-credential-oauth
     vscodium
     kde-blur
-    quickshell
+    neovim
     emacs-nox
   ];
 
@@ -122,22 +122,8 @@ in
     nerd-fonts.jetbrains-mono
   ];
 
-  # neovim
-  programs.neovim = {
-     enable = true;
-     defaultEditor = true;
-  };
-
-
-
   # zsh
   programs.zsh.enable = true;
-
-  # NixOS LD
-  programs.nix-ld.enable = true;
-  #programs.nix-ld.libraries = with pkgs; [
-  #  #...
-  #];
 
   # disable sudo password
   security.sudo = {
