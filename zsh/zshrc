@@ -28,15 +28,15 @@ alias nixosconfig="sudoedit /etc/nixos/configuration.nix"
 # export PATH="$HOME/.local/share/bin/vscodium:$PATH"
 alias code="codium"
 
-# Hyprland configuration
+# Hyprland Configuration
 alias hyprlandconfig="$EDITOR $HOME/.config/hypr/hyprland.conf"
 alias hyprpaperconfig="$EDITOR $HOME/.config/hypr/hyprpaper.conf"
 
-# asdf
+# ASDF
 # export PATH="${ASDF_DATA_DIR:-$HOME/.asdf}/shims:$PATH"
 
-# cargo
+# Cargo
 # export PATH="$HOME/.cargo/bin:$PATH"
 
-# opencode
+# OpenCode
 # export PATH="$HOME/.opencode/bin:$PATH"
