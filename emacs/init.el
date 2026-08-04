@@ -436,17 +436,131 @@
   (my/start-selection)
   (next-line))
 
+(defun my/micro-mark-p (char)
+  "Return non-nil when CHAR is a Unicode combining mark."
+  (memq (and char (get-char-code-property char 'general-category))
+        '(Mn Mc Me)))
+
+(defun my/micro-word-char-p (char)
+  "Return non-nil when CHAR belongs to a Micro-style word."
+  (or (eq char ?_)
+      (memq (and char (get-char-code-property char 'general-category))
+            '(Lu Ll Lt Lm Lo Nd Nl No))))
+
+(defun my/micro-whitespace-p (char)
+  "Return non-nil when CHAR is whitespace according to Micro."
+  (and char
+       (or (memq char '(9 10 11 12 13 32 133 160 5760 8232 8233
+                          8239 8287 12288))
+           (and (<= 8192 char) (<= char 8202)))))
+
+(defun my/micro-forward-character ()
+  "Move over one character as represented internally by Micro."
+  (unless (eobp)
+    (forward-char)
+    (while (and (not (eobp)) (my/micro-mark-p (char-after)))
+      (forward-char))))
+
+(defun my/micro-backward-character ()
+  "Move back over one character as represented internally by Micro."
+  (unless (bobp)
+    (backward-char)
+    (while (and (not (bobp)) (my/micro-mark-p (char-after)))
+      (backward-char))))
+
+(defun my/micro-next-character ()
+  "Return the character following the Micro character at point."
+  (save-excursion
+    (my/micro-forward-character)
+    (char-after)))
+
+(defun my/micro-previous-character ()
+  "Return the Micro character before point, clamped at line start."
+  (save-excursion
+    (unless (bolp)
+      (my/micro-backward-character))
+    (char-after)))
+
+(defun my/micro-word-right (&optional keep-selection)
+  "Move right using Micro's WordRight algorithm.
+Preserve an active selection when KEEP-SELECTION is non-nil."
+  (interactive)
+  (when (and (not keep-selection) (use-region-p))
+    (goto-char (region-end))
+    (deactivate-mark))
+  (catch 'done
+    (when (eobp)
+      (throw 'done nil))
+    (when (eolp)
+      (my/micro-forward-character)
+      (throw 'done nil))
+    (while (my/micro-whitespace-p (char-after))
+      (when (eolp)
+        (throw 'done nil))
+      (my/micro-forward-character))
+    (when (and (not (my/micro-word-char-p (char-after)))
+               (not (my/micro-whitespace-p (char-after)))
+               (not (my/micro-word-char-p (my/micro-next-character))))
+      (while (and (not (my/micro-word-char-p (char-after)))
+                  (not (my/micro-whitespace-p (char-after))))
+        (when (eolp)
+          (throw 'done nil))
+        (my/micro-forward-character))
+      (throw 'done nil))
+    (my/micro-forward-character)
+    (while (my/micro-word-char-p (char-after))
+      (when (eolp)
+        (throw 'done nil))
+      (my/micro-forward-character))))
+
+(defun my/micro-word-left (&optional keep-selection)
+  "Move left using Micro's WordLeft algorithm.
+Preserve an active selection when KEEP-SELECTION is non-nil."
+  (interactive)
+  (when (and (not keep-selection) (use-region-p))
+    (goto-char (region-beginning))
+    (deactivate-mark))
+  (catch 'done
+    (when (bobp)
+      (throw 'done nil))
+    (when (bolp)
+      (my/micro-backward-character)
+      (throw 'done nil))
+    (my/micro-backward-character)
+    (while (my/micro-whitespace-p (char-after))
+      (when (bolp)
+        (throw 'done nil))
+      (my/micro-backward-character))
+    (when (and (not (my/micro-word-char-p (char-after)))
+               (not (my/micro-whitespace-p (char-after)))
+               (not (my/micro-word-char-p (my/micro-previous-character))))
+      (while (and (not (my/micro-word-char-p (char-after)))
+                  (not (my/micro-whitespace-p (char-after))))
+        (when (bolp)
+          (throw 'done nil))
+        (my/micro-backward-character))
+      (my/micro-forward-character)
+      (throw 'done nil))
+    (my/micro-backward-character)
+    (while (my/micro-word-char-p (char-after))
+      (when (bolp)
+        (throw 'done nil))
+      (my/micro-backward-character))
+    (my/micro-forward-character)))
+
 (defun my/select-word-left ()
-  "Extend the existing selection one word to the left."
+  "Extend the selection left using Micro's word movement."
   (interactive)
   (my/start-selection)
-  (backward-word))
+  (my/micro-word-left t)
+  (activate-mark))
 
 (defun my/select-word-right ()
-  "Extend the existing selection one word to the right."
+  "Extend the selection right using Micro's word movement."
   (interactive)
   (my/start-selection)
-  (forward-word))
+  (my/micro-word-right t)
+  (activate-mark))
 
 (defun my/duplicate-line-or-region ()
   "Duplicate the active region or the current line."
@@ -535,6 +649,8 @@
 (global-set-key (kbd "<S-right>") #'my/select-right)
 (global-set-key (kbd "<S-up>") #'my/select-up)
 (global-set-key (kbd "<S-down>") #'my/select-down)
+(global-set-key (kbd "C-<left>") #'my/micro-word-left)
+(global-set-key (kbd "C-<right>") #'my/micro-word-right)
 (global-set-key (kbd "C-S-<left>") #'my/select-word-left)
 (global-set-key (kbd "C-S-<right>") #'my/select-word-right)
 (global-set-key [wheel-up] #'my/mouse-wheel-up)
