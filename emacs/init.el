@@ -53,9 +53,9 @@
       initial-scratch-message nil
       initial-major-mode 'fundamental-mode
       ring-bell-function #'ignore
-      message-log-max 200
+      message-log-max nil
       warning-minimum-level :error
-      warning-minimum-log-level :warning
+      warning-minimum-log-level :error
       use-dialog-box nil
       use-file-dialog nil
       confirm-kill-emacs #'y-or-n-p
@@ -66,6 +66,7 @@
       mouse-wheel-progressive-speed nil
       redisplay-dont-pause t
       fast-but-imprecise-scrolling t
+      native-comp-jit-compilation nil
       read-process-output-max (* 1024 1024)
       tab-width 4
       indent-tabs-mode nil
@@ -100,21 +101,37 @@
 (global-tab-line-mode 1)
 (when (fboundp 'xterm-mouse-mode)
   (xterm-mouse-mode 1))
+(when (fboundp 'mouse-wheel-mode)
+  (mouse-wheel-mode 1))
+
+;; Keep implementation buffers available to Emacs without ever displaying
+;; them as editor tabs or automatic fallback buffers.
+(dolist (pattern '("\\`\\*Messages\\*\\'"
+                   "\\`\\*Warnings\\*\\'"
+                   "\\`\\*Async-native-compile-log\\*\\'"))
+  (add-to-list 'display-buffer-alist
+               `(,pattern (display-buffer-no-window) (allow-no-window . t))))
+
+(defun my/remove-internal-log-buffers ()
+  "Remove internal log buffers that are intentionally disabled."
+  (dolist (name '("*Messages*" "*Warnings*" "*Async-native-compile-log*"))
+    (when-let ((buffer (get-buffer name)))
+      (kill-buffer buffer))))
+
+(add-hook 'emacs-startup-hook #'my/remove-internal-log-buffers)
 
 ;; Shift plus an arrow extends the selection; arrows without Shift clear it.
 (setq shift-select-mode t)
 
 (dolist (hook '(prog-mode-hook text-mode-hook conf-mode-hook))
   (add-hook hook (lambda ()
-                   (setq-local indent-tabs-mode nil)
-                   (display-fill-column-indicator-mode 1))))
+                   (setq-local indent-tabs-mode nil))))
 (dolist (hook '(term-mode-hook shell-mode-hook eshell-mode-hook
                 dired-mode-hook help-mode-hook))
   (add-hook hook (lambda () (display-line-numbers-mode -1))))
 
 (add-hook 'before-save-hook #'delete-trailing-whitespace)
 (add-hook 'prog-mode-hook #'hs-minor-mode)
-(add-hook 'prog-mode-hook #'flymake-mode)
 (add-hook 'prog-mode-hook #'completion-preview-mode)
 
 ;;; Doom-inspired terminal UI
@@ -129,21 +146,50 @@
   :init
   (setq doom-modeline-icon (display-graphic-p)
         doom-modeline-major-mode-icon nil
-        doom-modeline-buffer-file-name-style 'truncate-with-project
+        doom-modeline-buffer-file-name-style 'relative-from-project
         doom-modeline-buffer-state-icon t
         doom-modeline-buffer-modification-icon t
-        doom-modeline-position-column-line-format '("%l:%c")
-        doom-modeline-height 24)
+        doom-modeline-position-column-line-format '(" %l:%c ")
+        doom-modeline-percent-position '(" %p ")
+        doom-modeline-project-name t
+        doom-modeline-workspace-name nil
+        doom-modeline-buffer-encoding nil
+        doom-modeline-indent-info nil
+        doom-modeline-vcs-icon nil
+        doom-modeline-vcs-max-length 24
+        doom-modeline-check nil
+        doom-modeline-lsp nil
+        doom-modeline-modal nil
+        doom-modeline-height 25)
   :config
   (doom-modeline-mode 1))
 
 (set-face-attribute 'vertical-border nil :foreground "#3f444a")
 (set-face-attribute 'fringe nil :background "#282c34")
-(set-face-attribute 'tab-line nil :background "#1b1d23" :foreground "#5B6268" :height 0.95)
-(set-face-attribute 'tab-line-tab-current nil :background "#282c34" :foreground "#bbc2cf" :box nil)
+(set-face-attribute 'mode-line nil :background "#1b1d23" :foreground "#bbc2cf" :box nil)
+(set-face-attribute 'mode-line-active nil :background "#1b1d23" :foreground "#bbc2cf" :box nil)
+(set-face-attribute 'mode-line-inactive nil :background "#16181d" :foreground "#5B6268" :box nil)
+(set-face-attribute 'doom-modeline-bar nil :background "#51afef")
+(set-face-attribute 'doom-modeline-buffer-file nil :foreground "#dfdfdf" :weight 'bold)
+(set-face-attribute 'doom-modeline-buffer-modified nil :foreground "#ECBE7B" :weight 'bold)
+(set-face-attribute 'doom-modeline-project-dir nil :foreground "#98be65" :weight 'bold)
+(set-face-attribute 'doom-modeline-buffer-major-mode nil :foreground "#c678dd" :weight 'bold)
+
+(defun my/tab-line-tab-name (buffer &optional _buffers)
+  "Return a compact terminal-friendly label for BUFFER."
+  (with-current-buffer buffer
+    (format " %s%s "
+            (truncate-string-to-width (buffer-name) 24 nil nil "...")
+            (if (buffer-modified-p) " *" ""))))
+
+(set-face-attribute 'tab-line nil :background "#16181d" :foreground "#5B6268" :height 0.95 :box nil)
+(set-face-attribute 'tab-line-tab-current nil :background "#51afef" :foreground "#1b1d23" :weight 'bold :box nil)
 (set-face-attribute 'tab-line-tab-inactive nil :background "#21242b" :foreground "#73797e" :box nil)
+(set-face-attribute 'tab-line-highlight nil :background "#3f444a" :foreground "#bbc2cf" :box nil)
 (setq tab-line-close-button-show nil
       tab-line-new-button-show nil
+      tab-line-separator ""
+      tab-line-tab-name-function #'my/tab-line-tab-name
       tab-line-switch-cycling t
       window-divider-default-right-width 1)
 (window-divider-mode 1)
@@ -252,11 +298,54 @@
 (defun my/close-buffer ()
   "Close the current buffer without closing its window."
   (interactive)
-  (when (buffer-modified-p)
-    (if (y-or-n-p (format "Save %s before closing? " (buffer-name)))
-        (save-buffer)
-      (set-buffer-modified-p nil)))
-  (kill-current-buffer))
+  (let* ((closing (current-buffer))
+         (scratch-p (equal (buffer-name closing) "*scratch*"))
+         (next (seq-find
+                (lambda (buffer)
+                  (and (not (eq buffer closing))
+                       (buffer-live-p buffer)
+                       (let ((name (buffer-name buffer)))
+                         (and name
+                              (not (string-prefix-p " " name))
+                              (or (buffer-file-name buffer)
+                                  (not (string-prefix-p "*" name)))))))
+                (buffer-list))))
+    (when (and (buffer-modified-p) (not scratch-p))
+      (if (y-or-n-p (format "Save %s before closing? " (buffer-name)))
+          (save-buffer)
+        (set-buffer-modified-p nil)))
+    (when scratch-p
+      (set-buffer-modified-p nil))
+    (kill-buffer closing)
+    ;; Always keep one scratch buffer alive, but prefer another user buffer.
+    (let* ((existing-scratch (get-buffer "*scratch*"))
+           (scratch (or existing-scratch (get-buffer-create "*scratch*"))))
+      (unless existing-scratch
+        (with-current-buffer scratch
+          (funcall initial-major-mode)))
+      (switch-to-buffer (or next scratch)))))
+
+(defun my/mouse-event-window (event)
+  "Select the window under mouse EVENT, when it is a live window."
+  (let ((window (posn-window (event-start event))))
+    (when (window-live-p window)
+      (select-window window))))
+
+(defun my/mouse-wheel-up (event)
+  "Scroll three lines toward the beginning at mouse EVENT."
+  (interactive "e")
+  (my/mouse-event-window event)
+  (condition-case nil
+      (scroll-down-line 3)
+    (beginning-of-buffer nil)))
+
+(defun my/mouse-wheel-down (event)
+  "Scroll three lines toward the end at mouse EVENT."
+  (interactive "e")
+  (my/mouse-event-window event)
+  (condition-case nil
+      (scroll-up-line 3)
+    (end-of-buffer nil)))
 
 (defun my/quit-emacs ()
   "Offer to save each file, then exit without a modified-buffer prompt."
@@ -283,14 +372,20 @@
 (defun my/move-left ()
   "Move left and clear an active selection."
   (interactive)
-  (deactivate-mark)
-  (backward-char))
+  (if (use-region-p)
+      (let ((start (region-beginning)))
+        (deactivate-mark)
+        (goto-char start))
+    (backward-char)))
 
 (defun my/move-right ()
   "Move right and clear an active selection."
   (interactive)
-  (deactivate-mark)
-  (forward-char))
+  (if (use-region-p)
+      (let ((end (region-end)))
+        (deactivate-mark)
+        (goto-char end))
+    (forward-char)))
 
 (defun my/move-up ()
   "Move up and clear an active selection."
@@ -309,6 +404,13 @@
   (unless (use-region-p)
     (set-mark (point))
     (activate-mark)))
+
+(defun my/select-all ()
+  "Select the whole buffer with point at the end."
+  (interactive)
+  (set-mark (point-min))
+  (goto-char (point-max))
+  (activate-mark))
 
 (defun my/select-left ()
   "Extend the selection one character left."
@@ -333,6 +435,18 @@
   (interactive)
   (my/start-selection)
   (next-line))
+
+(defun my/select-word-left ()
+  "Extend the existing selection one word to the left."
+  (interactive)
+  (my/start-selection)
+  (backward-word))
+
+(defun my/select-word-right ()
+  "Extend the existing selection one word to the right."
+  (interactive)
+  (my/start-selection)
+  (forward-word))
 
 (defun my/duplicate-line-or-region ()
   "Duplicate the active region or the current line."
@@ -393,13 +507,6 @@
          (display-buffer-in-side-window
           buffer '((side . bottom) (slot . -1) (window-height . 0.30))))))))
 
-(defun my/format-buffer ()
-  "Format using Eglot when available, otherwise reindent the buffer."
-  (interactive)
-  (if (and (fboundp 'eglot-managed-p) (eglot-managed-p))
-      (eglot-format-buffer)
-    (indent-region (point-min) (point-max))))
-
 (defun my/toggle-zen ()
   "Toggle a distraction-free single-window layout."
   (interactive)
@@ -417,7 +524,7 @@
 (global-set-key (kbd "C-f") #'isearch-forward)
 (global-set-key (kbd "C-z") #'undo-only)
 (global-set-key (kbd "C-y") #'undo-redo)
-(global-set-key (kbd "C-a") #'mark-whole-buffer)
+(global-set-key (kbd "C-a") #'my/select-all)
 (global-set-key (kbd "C-d") #'my/duplicate-line-or-region)
 (global-set-key (kbd "C-/") #'comment-line)
 (global-set-key (kbd "<left>") #'my/move-left)
@@ -428,6 +535,12 @@
 (global-set-key (kbd "<S-right>") #'my/select-right)
 (global-set-key (kbd "<S-up>") #'my/select-up)
 (global-set-key (kbd "<S-down>") #'my/select-down)
+(global-set-key (kbd "C-S-<left>") #'my/select-word-left)
+(global-set-key (kbd "C-S-<right>") #'my/select-word-right)
+(global-set-key [wheel-up] #'my/mouse-wheel-up)
+(global-set-key [wheel-down] #'my/mouse-wheel-down)
+(global-set-key [mouse-4] #'my/mouse-wheel-up)
+(global-set-key [mouse-5] #'my/mouse-wheel-down)
 (global-set-key (kbd "M-<up>") #'my/move-line-up)
 (global-set-key (kbd "M-<down>") #'my/move-line-down)
 (global-set-key (kbd "M-S-<up>") #'mc/mark-previous-like-this)
@@ -453,7 +566,8 @@
   "C-v" #'yank
   "C-q" #'my/close-buffer
   "M-q" #'my/quit-emacs
-  "C-e" #'execute-extended-command)
+  "C-e" #'execute-extended-command
+  "C-a" #'my/select-all)
 (define-minor-mode my/familiar-keys-mode
   "Use conventional copy and cut keys instead of Emacs prefix maps."
   :global t
@@ -484,6 +598,8 @@
                 json-ts-mode-hook css-mode-hook css-ts-mode-hook
                 html-mode-hook mhtml-mode-hook yaml-ts-mode-hook))
   (add-hook hook (lambda () (setq-local tab-width 2))))
+
+(my/remove-internal-log-buffers)
 
 (provide 'init)
 ;;; init.el ends here
