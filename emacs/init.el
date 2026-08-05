@@ -561,6 +561,14 @@ Preserve an active selection when KEEP-SELECTION is non-nil."
   (my/micro-word-right t)
   (activate-mark))
 
+(defun my/micro-delete-word-left ()
+  "Delete left using Micro's DeleteWordLeft algorithm."
+  (interactive)
+  (my/select-word-left)
+  (when (use-region-p)
+    (delete-region (region-beginning) (region-end)))
+  (deactivate-mark))
+
 (defun my/duplicate-line-or-region ()
   "Duplicate the active region or the current line."
   (interactive)
@@ -652,6 +660,8 @@ Preserve an active selection when KEEP-SELECTION is non-nil."
 (global-set-key (kbd "C-<right>") #'my/micro-word-right)
 (global-set-key (kbd "C-S-<left>") #'my/select-word-left)
 (global-set-key (kbd "C-S-<right>") #'my/select-word-right)
+(dolist (key '("C-<backspace>" "C-DEL" "M-<backspace>" "M-DEL" "M-C-h"))
+  (global-set-key (kbd key) #'my/micro-delete-word-left))
 (global-set-key [wheel-up] #'my/mouse-wheel-up)
 (global-set-key [wheel-down] #'my/mouse-wheel-down)
 (global-set-key [mouse-4] #'my/mouse-wheel-up)
