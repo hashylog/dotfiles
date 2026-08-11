@@ -84,6 +84,7 @@
   (tooltip-mode -1))
 (blink-cursor-mode -1)
 (column-number-mode -1)
+(line-number-mode -1)
 (global-display-line-numbers-mode 1)
 (global-auto-revert-mode 1)
 (global-so-long-mode 1)
@@ -98,17 +99,6 @@
   (xterm-mouse-mode 1))
 (when (fboundp 'mouse-wheel-mode)
   (mouse-wheel-mode 1))
-
-;; Keep implementation buffers available to Emacs without ever displaying
-;; them as editor tabs or automatic fallback buffers.
-(dolist (pattern '("\\`\\*Messages\\*\\'"
-                   "\\`\\*Warnings\\*\\'"
-                   "\\`\\*Async-native-compile-log\\*\\'"))
-  (add-to-list 'display-buffer-alist
-                `(,pattern (display-buffer-no-window) (allow-no-window . t))))
-
-(setq switch-to-prev-buffer-skip-regexp
-      "\\` \\|\\`\\*\\(?:Messages\\|Warnings\\|Async-native-compile-log\\)\\*\\'")
 
 (setq shift-select-mode t)
 
@@ -229,8 +219,6 @@
 (require 'my-editor-commands)
 (require 'my-micro)
 (require 'my-keybindings)
-(require 'my-treemacs)
 
 (provide 'init)
 ;;; init.el ends here
-
