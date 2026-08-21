@@ -5,6 +5,7 @@
 { config, pkgs, ... }:
 
 let
+  # Custom packages
   kde-blur = pkgs.kdePackages.callPackage ./pkgs/kde-blur/nix/package.nix { };
 in
 {
@@ -64,8 +65,6 @@ in
     jack.enable = true;
   };
 
-# --- --- ---
-
   # hashylog
   users.users."hashylog" = {
     isNormalUser = true;
@@ -99,6 +98,7 @@ in
     unrar
     firefox
     zsh
+    easyeffects
   ];
 
   # Flatpak
