@@ -68,7 +68,6 @@ in
   # hashylog
   users.users."hashylog" = {
     isNormalUser = true;
-    #shell = pkgs.zsh;
     description = "hashylog";
     extraGroups = [ "networkmanager" "wheel" ];
   };
@@ -99,6 +98,7 @@ in
     firefox
     zsh
     easyeffects
+    gimp
   ];
 
   # Flatpak
