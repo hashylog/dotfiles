@@ -1,82 +1,84 @@
-;;; init.el --- Load MICE -*- lexical-binding: t; -*-
 
-;; Change this path if mice.el is installed elsewhere.
+;; mice.el
 (load "/home/hashylog/Documents/Projects/mice/mice.el")
 
-;; Enable tab line
-(require 'tab-line)
+;; Elpaca
+(defvar elpaca-installer-version 0.12)
+(defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
+(defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
+(defvar elpaca-sources-directory (expand-file-name "sources/" elpaca-directory))
+(defvar elpaca-order '(elpaca :repo "https://github.com/progfolio/elpaca.git"
+                              :ref nil :depth 1 :inherit ignore
+                              :files (:defaults "elpaca-test.el" (:exclude "extensions"))
+                              :build (:not elpaca-activate)))
+(let* ((repo  (expand-file-name "elpaca/" elpaca-sources-directory))
+       (build (expand-file-name "elpaca/" elpaca-builds-directory))
+       (order (cdr elpaca-order))
+       (default-directory repo))
+  (add-to-list 'load-path (if (file-exists-p build) build repo))
+  (unless (file-exists-p repo)
+    (make-directory repo t)
+    (when (<= emacs-major-version 28) (require 'subr-x))
+    (condition-case-unless-debug err
+        (if-let* ((buffer (pop-to-buffer-same-window "*elpaca-bootstrap*"))
+                  ((zerop (apply #'call-process `("git" nil ,buffer t "clone"
+                                                  ,@(when-let* ((depth (plist-get order :depth)))
+                                                      (list (format "--depth=%d" depth) "--no-single-branch"))
+                                                  ,(plist-get order :repo) ,repo))))
+                  ((zerop (call-process "git" nil buffer t "checkout"
+                                        (or (plist-get order :ref) "--"))))
+                  (emacs (concat invocation-directory invocation-name))
+                  ((zerop (call-process emacs nil buffer nil "-Q" "-L" "." "--batch"
+                                        "--eval" "(byte-recompile-directory \".\" 0 'force)")))
+                  ((require 'elpaca))
+                  ((elpaca-generate-autoloads "elpaca" repo)))
+            (progn (message "%s" (buffer-string)) (kill-buffer buffer))
+          (error "%s" (with-current-buffer buffer (buffer-string))))
+      ((error) (warn "%s" err) (delete-directory repo 'recursive))))
+  (unless (require 'elpaca-autoloads nil t)
+    (require 'elpaca)
+    (elpaca-generate-autoloads "elpaca" repo)
+    (let ((load-source-file-function nil)) (load "./elpaca-autoloads"))))
+(add-hook 'after-init-hook #'elpaca-process-queues)
+(elpaca `(,@elpaca-order))
 
-;; Reuse semantic faces from whichever theme is active.
-(defun my-apply-ui-faces ()
-  (let ((mode-line-background
-         (face-attribute 'mode-line :background nil t))
-        (inactive-background
-         (face-attribute 'mode-line-inactive :background nil t))
-        (muted-foreground
-         (face-attribute 'shadow :foreground nil t)))
-    (set-face-attribute 'mode-line nil
-                        :inherit 'shadow
-                        :foreground muted-foreground
-                        :background mode-line-background
-                        :box nil)
-    (set-face-attribute 'mode-line-inactive nil
-                        :inherit 'shadow
-                        :foreground muted-foreground
-                        :background inactive-background
-                        :box nil)
-    (set-face-attribute 'tab-line nil
-                        :inherit 'shadow
-                        :foreground muted-foreground
-                        :background inactive-background
-                        :box nil)
-    (set-face-attribute 'tab-line-tab-inactive nil
-                        :inherit 'shadow
-                        :foreground muted-foreground
-                        :background inactive-background
-                        :box nil)
-    (set-face-attribute 'tab-line-tab-current nil
-                        :inherit 'shadow
-                        :foreground muted-foreground
-                        :background mode-line-background
-                        :weight 'bold
-                        :box nil)))
+;; Install use-package support
+(elpaca elpaca-use-package
+  ;; Enable use-package :ensure support for Elpaca.
+  (elpaca-use-package-mode))
 
-(add-hook 'after-load-theme-hook #'my-apply-ui-faces)
-(my-apply-ui-faces)
 
-;; "File", "Edit", and similar entries belong to the menu bar.
-(menu-bar-mode -1)
-(when (fboundp 'tool-bar-mode)
-  (tool-bar-mode -1))
+;; ----- Packages -----
 
-;; Show only the current buffer name in the mode line.
-(setq-default mode-line-format '("   %b"))
+;; Orderless
+(use-package orderless :ensure t
+  :init
+  (setq completion-styles '(orderless basic)
+        completion-category-defaults nil
+        completion-category-overrides '((file (styles partial-completion)))))
 
-;; Show the buffers in the current window as native Emacs tabs.
-(setq tab-line-close-button-show t
-      tab-line-separator " "
-      tab-line-new-button-show nil
-      tab-line-switch-cycling t)
-(global-tab-line-mode 1)
+;; DTRT Indent
+(use-package dtrt-indent :ensure t
+  :init
+  (setq dtrt-indent-lighter nil
+        dtrt-indent-verbosity 0
+        dtrt-indent-run-after-smie t)
+  :config
+  (dtrt-indent-global-mode 1))
 
-;; Show line numbers in all buffers.
+;; Clipetty
+(use-package clipetty :ensure t
+  :if (not (display-graphic-p))
+  :config
+  (global-clipetty-mode 1))
+
+
+;; ----- General -----
+
+;; Theme
+(add-to-list 'custom-theme-load-path "$HOME/.config/emacs/themes")
+;;(load-theme 'onethreeseven t)
+
+;; Show line numbers
 (global-display-line-numbers-mode 1)
 
-
-;;; init.el ends here
-(custom-set-variables
- ;; custom-set-variables was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(custom-safe-themes
-   '("b6c43bb2aea78890cf6bd4a970e6e0277d2daf0075272817ea8bb53f9c6a7f0a"
-     default))
- '(package-selected-packages
-   '(ample-theme clipetty consult dtrt-indent multiple-cursors orderless)))
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- )
