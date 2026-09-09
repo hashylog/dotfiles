@@ -3,10 +3,7 @@
 ;; Change this path if mice.el is installed elsewhere.
 (load "/home/hashylog/Documents/Projects/mice/mice.el")
 
-;;; Personal visual settings
-
-;; Load the darker Omtose Phellack variant installed from MELPA.
-(load-theme 'omtose-darker t)
+;; Enable tab line
 (require 'tab-line)
 
 ;; Reuse semantic faces from whichever theme is active.
@@ -62,5 +59,24 @@
       tab-line-switch-cycling t)
 (global-tab-line-mode 1)
 
+;; Show line numbers in all buffers.
+(global-display-line-numbers-mode 1)
+
 
 ;;; init.el ends here
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(custom-safe-themes
+   '("b6c43bb2aea78890cf6bd4a970e6e0277d2daf0075272817ea8bb53f9c6a7f0a"
+     default))
+ '(package-selected-packages
+   '(ample-theme clipetty consult dtrt-indent multiple-cursors orderless)))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )
