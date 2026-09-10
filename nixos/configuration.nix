@@ -27,6 +27,10 @@ in
   # Networking
   networking.networkmanager.enable = true;
 
+  # Bluetooth
+  hardware.bluetooth.enable = true;
+  hardware.bluetooth.powerOnBoot = true;
+
   # Time Zone
   time.timeZone = "America/Sao_Paulo";
 
@@ -65,6 +69,28 @@ in
     jack.enable = true;
   };
 
+  # Graphics
+  hardware.graphics.enable = true;
+  hardware.graphics.enable32Bit = true;
+
+  # NVIDIA
+  services.xserver.videoDrivers = [ "amdgpu" "nvidia" ];
+
+  hardware.nvidia = {
+    modesetting.enable = true;
+    open = true;
+    nvidiaSettings = true;
+
+    prime = {
+      offload.enable = true;
+      offload.enableOffloadCmd = true;
+
+      amdgpuBusId = "PCI:5@0:0:0";
+      nvidiaBusId = "PCI:1@0:0:0";
+    };
+  };
+
+
   # hashylog
   users.users."hashylog" = {
     isNormalUser = true;
@@ -99,6 +125,9 @@ in
     zsh
     easyeffects
     gimp
+    blender
+    uv
+    godot
   ];
 
   # Flatpak
